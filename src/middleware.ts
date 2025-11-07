@@ -16,11 +16,11 @@ export async function middleware(request: NextRequest) {
     if (startsWith("/app")) {
       return NextResponse.next();
     } else {
-      return NextResponse.redirect("/app/dashboard");
+      return NextResponse.redirect(new URL("/app/dashboard", request.nextUrl));
     }
   } else {
     if (startsWith("/app")) {
-      return NextResponse.redirect("/signin");
+      return NextResponse.redirect(new URL("/signin", request.nextUrl));
     }
   }
 }
