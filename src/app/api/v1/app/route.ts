@@ -1,68 +1,35 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/options";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { getItenerarySchema } from "@/zodTypes/getItenerary";
 import z from "zod";
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ msg: "unauthenticated" }, { status: 400 });
-  }
 
-  const ai = new GoogleGenAI({});
-  const tokenResponse = await ai.models.countTokens({
-    model: "gemini-2.5-flash",
-    // Put system instruction as a content item with role 'system'
-
-    contents: [
-      {
-        role: "system",
-        parts: [
-          {
-            text: "you are an expert travel/vacation planner, you have knowledge of all the places across the world and ways to travel to those places. ###instructions### your job is to make iteneraries as per the user requests and with every consideration(that the user has provided) kept in mind, in the user instruction there will be a json object with four fields, 1.'start date' meaning the day they can start travelling, 2.'end date': meaning the day they have to reach back at their original location 3.'place' : meaning the place they want to travel to 4. 'from':meaning the place that they are travelling from i.e. their initial location or starting location. ### additional information ### assume that there is only one person travelling and their budget is low.",
-          },
-        ],
-      },
-      {
-        role: "user",
-        parts: [
-          {
-            text:
-              "{" +
-              '"startDate":"11/2/2026",' +
-              '"endDate":"17/2/2026",' +
-              '"place":"coorg, karnataka, india",' +
-              '"from":"mumbai, india"' +
-              "}",
-          },
-        ],
-      },
-    ],
-  });
-  console.log(tokenResponse);
-  const userObject = {
-    startDate: "7/1/2026",
-    endDate: "13/1/2026",
-    place: "coorg, karnataka, india",
-    from: "mumbai, maharashtra",
-  };
-  const response = await ai.models.generateContentStream({
-    model: "gemini-2.5-pro",
-
-    config: {
-      systemInstruction: `You are an expert travel and vacation planner with deep knowledge of global destinations, transportation methods, budget-friendly travel strategies, and optimized itinerary design.
+const systemPrompt = `You are an expert travel and vacation planner with deep knowledge of global destinations, transportation methods, budget-friendly travel strategies, and optimized itinerary design.
 
 Your task is to create detailed, realistic, low-budget itineraries strictly based on user requests.
 
 The user will provide a JSON object with the following fields:
-1. "startDate": the date the traveler begins their journey.
-2. "endDate": the date the traveler must return to their origin.
-3. "place": the destination the traveler wants to visit.
-4. "from": the starting location.
-important consideration** : dates are in dd/mm/yyyy fromat.
+
+1. "startDate": the ISO date (yyyy-mm-dd) when the traveler begins their journey.
+2. "endDate": the ISO date (yyyy-mm-dd) when the traveler must return to their origin.
+3. "fromPlace": an object containing:
+   - "name": the starting location name (the traveler’s origin).
+   - "class": always "place" for the origin, meaning it is just the starting location and not the focus of the itinerary.
+4. "toPlace": an object containing:
+   - "name": the destination name.
+   - "class": one of:
+       • "place"  → a general city/region or area.
+       • "historic" → mainly a historically important place; prioritize historical sites, monuments, museums, and heritage walks.
+       • "tourism" → a popular tourist destination; prioritize famous attractions, sightseeing spots, experiences, and activities.
+
+Important consideration: dates follow ISO format (yyyy-mm-dd), and both startDate and endDate are inclusive.
+
 
 *** important instruction ***
-- before writing about the transit time between two places, please double check the distance between those two places and the mode of transport between them, only after incorporating these conditions, give the transit time between them.
+- before writing about the transit time between two places, please double check the distance between those two places and the mode of transport between them, only after incorporating these conditions, give the transit time between them, after calculating the transit time, make sure to start the next activity considering the exact end of the transit time, for example :
+suppose a train taken from place A takes 16 hours to reach the place B, if the train from place A is boarded at 8:00 PM, then the next task/activity in our activity should not start before 16 hours, and 16 hours after 8:00 PM is 12:00 PM the next day , so the next activity/task will start after 12 PM only. keep this in mind for all kinds of transits in the whole itinerary.
+
 Assumptions:
 - Only one person is traveling.
 - The traveler has a low budget.
@@ -79,27 +46,78 @@ Output Requirements:
 - Add destination-specific travel tips.
 - Ensure all recommendations stay within a low-budget travel style.
 
-Keep the tone clear, practical, and helpful.
-`,
-    },
+Keep the tone clear, practical, and helpful.`;
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ msg: "unauthenticated" }, { status: 400 });
+    }
+    const reqBody = await req.json();
+    type ReqBodyType = z.infer<typeof getItenerarySchema>;
+    const userObject = reqBody as ReqBodyType;
+    const { success } = getItenerarySchema.safeParse(reqBody);
+    if (!success)
+      return NextResponse.json({ msg: "invalid inputs" }, { status: 400 });
 
-    contents: JSON.stringify(userObject),
-  });
+    const ai = new GoogleGenAI({});
 
-  function responseToStream() {
-    return new ReadableStream({
-      async pull(controller) {
-        const { done, value } = await response.next();
-        if (done) {
-          controller.close();
-          return;
-        }
-        controller.enqueue(value.text);
-      },
+    const tokenResponse = await ai.models.countTokens({
+      model: "gemini-2.5-flash",
+      // Put system instruction as a content item with role 'system'
+
+      contents: [
+        {
+          role: "system",
+
+          parts: [
+            {
+              text: systemPrompt,
+            },
+          ],
+        },
+        {
+          role: "user",
+          parts: [
+            {
+              text: JSON.stringify(userObject),
+            },
+          ],
+        },
+      ],
     });
+    console.log(tokenResponse);
+
+    const response = await ai.models.generateContentStream({
+      model: "gemini-2.5-flash",
+
+      config: {
+        thinkingConfig: { thinkingBudget: 0 },
+        tools: [{ googleSearch: {} }],
+        systemInstruction: systemPrompt,
+      },
+
+      contents: JSON.stringify(userObject),
+    });
+
+    function responseToStream() {
+      return new ReadableStream({
+        async pull(controller) {
+          const { done, value } = await response.next();
+          if (done) {
+            controller.close();
+            return;
+          }
+
+          controller.enqueue(value.text);
+        },
+      });
+    }
+    const responseStream = responseToStream();
+    return new Response(responseStream);
+  } catch (error) {
+    console.log(error);
   }
-  const responseStream = responseToStream();
-  return new Response(responseStream);
 }
 
 // function setTimeoutPromisified(delay: number) {
