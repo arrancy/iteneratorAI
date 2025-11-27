@@ -3,8 +3,8 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { getItenerarySchema } from "@/zodTypes/getItenerary";
-import z from "zod";
 
+import z from "zod";
 const systemPrompt = `You are an expert travel and vacation planner with deep knowledge of global destinations, transportation methods, budget-friendly travel strategies, and optimized itinerary design.
 
 Your task is to create detailed, realistic, low-budget itineraries strictly based on user requests.
@@ -56,10 +56,8 @@ export async function POST(req: NextRequest) {
     const reqBody = await req.json();
     type ReqBodyType = z.infer<typeof getItenerarySchema>;
     const userObject = reqBody as ReqBodyType;
-    const { success } = getItenerarySchema.safeParse(reqBody);
-    if (!success)
-      return NextResponse.json({ msg: "invalid inputs" }, { status: 400 });
-
+    const fromPlaceName = userObject.fromPlace.name;
+    const toPlaceName = userObject.toPlace.name;
     const ai = new GoogleGenAI({});
 
     const tokenResponse = await ai.models.countTokens({
