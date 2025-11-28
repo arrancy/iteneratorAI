@@ -3,10 +3,12 @@ export const getItenerarySchema = z.object({
   fromPlace: z.object({
     name: z.string().min(1),
     osm_key: z.enum(["place"]),
+    osm_id: z.number(),
   }),
   toPlace: z.object({
     name: z.string().min(1),
     osm_key: z.enum(["place", "historic", "tourism"]),
+    osm_id: z.number(),
   }),
   startDate: z.iso.date(),
   endDate: z.iso.date(),
