@@ -2,13 +2,13 @@ import { PhotonResponse } from "@/types/photon/PhotonTypes";
 type Params =
   | {
       fromOrTo: "from";
-      placename: string;
+      placeName: string;
       osm_key: "place";
       osm_id: number;
     }
   | {
       fromOrTo: "to";
-      placename: string;
+      placeName: string;
       osm_key: "place" | "historic" | "tourism";
       osm_id: number;
     };
@@ -35,12 +35,12 @@ const isPlaceFound = async (apiUrl: string, osm_id: number) => {
 
 export const photonRequestFunction = async (params: Params) => {
   if (params.fromOrTo === "from") {
-    const apiUrl = photonUrlStringFunction("from", params.placename);
+    const apiUrl = photonUrlStringFunction("from", params.placeName);
     const placeFound = await isPlaceFound(apiUrl, params.osm_id);
     if (!placeFound) return null;
     return placeFound;
   } else if (params.fromOrTo === "to") {
-    const apiUrl = photonUrlStringFunction("to", params.placename);
+    const apiUrl = photonUrlStringFunction("to", params.placeName);
     const placeFound = await isPlaceFound(apiUrl, params.osm_id);
     if (!placeFound) return null;
     return placeFound;

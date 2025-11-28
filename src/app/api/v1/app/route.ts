@@ -5,6 +5,8 @@ import { GoogleGenAI } from "@google/genai";
 import { getItenerarySchema } from "@/zodTypes/getItenerary";
 
 import z from "zod";
+import { photonRequestFunction } from "@/utils/photonRequest";
+
 const systemPrompt = `You are an expert travel and vacation planner with deep knowledge of global destinations, transportation methods, budget-friendly travel strategies, and optimized itinerary design.
 
 Your task is to create detailed, realistic, low-budget itineraries strictly based on user requests.
@@ -14,7 +16,7 @@ The user will provide a JSON object with the following fields:
 1. "startDate": the ISO date (yyyy-mm-dd) when the traveler begins their journey.
 2. "endDate": the ISO date (yyyy-mm-dd) when the traveler must return to their origin.
 3. "fromPlace": an object containing:
-   - "name": the starting location name (the traveler’s origin).
+   - "name": the starting location name (the traveller’s origin).
    - "class": always "place" for the origin, meaning it is just the starting location and not the focus of the itinerary.
 4. "toPlace": an object containing:
    - "name": the destination name.
@@ -56,8 +58,34 @@ export async function POST(req: NextRequest) {
     const reqBody = await req.json();
     type ReqBodyType = z.infer<typeof getItenerarySchema>;
     const userObject = reqBody as ReqBodyType;
-    const fromPlaceName = userObject.fromPlace.name;
-    const toPlaceName = userObject.toPlace.name;
+    const fromPlaceObject: {
+      fromOrTo: "from";
+      placeName: string;
+      osm_key: "place";
+      osm_id: number;
+    } = {
+      fromOrTo: "from",
+      placeName: userObject.fromPlace.name,
+      osm_key: "place",
+      osm_id: userObject.fromPlace.osm_id,
+    };
+
+    const toPlaceObject: {
+      fromOrTo: "to";
+      placeName: string;
+      osm_key: "place" | "historic" | "tourism";
+      osm_id: number;
+    } = {
+      fromOrTo: "to",
+      placeName: userObject.toPlace.name,
+      osm_key: userObject.toPlace.osm_key,
+      osm_id: userObject.toPlace.osm_id,
+    };
+
+    const isFromPlaceValid = await photonRequestFunction(fromPlaceObject);
+    const isToPlaceValid = await photonRequestFunction(toPlaceObject);
+    if (!isFromPlaceValid || isToPlaceValid)
+      return NextResponse.json({ msg: "invalid inputs" }, { status: 401 });
     const ai = new GoogleGenAI({});
 
     const tokenResponse = await ai.models.countTokens({
