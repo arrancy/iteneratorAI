@@ -17,13 +17,19 @@ The user will provide a JSON object with the following fields:
 2. "endDate": the ISO date (yyyy-mm-dd) when the traveler must return to their origin.
 3. "fromPlace": an object containing:
    - "name": the starting location name (the traveller’s origin).
-   - "class": always "place" for the origin, meaning it is just the starting location and not the focus of the itinerary.
+   - "osm_key": always "place" for the origin, meaning it is just the starting location and not the focus of the itinerary.
+   - "osm_id" : osm id of that place
 4. "toPlace": an object containing:
    - "name": the destination name.
-   - "class": one of:
+   - "osm_key": one of:
        • "place"  → a general city/region or area.
        • "historic" → mainly a historically important place; prioritize historical sites, monuments, museums, and heritage walks.
        • "tourism" → a popular tourist destination; prioritize famous attractions, sightseeing spots, experiences, and activities.
+   - "osm_id" : osm id of that place
+
+note : if the toPlace is a place which can be covered in a relatively shorter time compared to the itinerary then you have to do these two things =>
+1. craft the itinerary in such a way that the place is explored in the most detailed way possible(because if they added that place and kept such a long time in the itinerary, it means they want to explore it properly)
+2. if the place can be completely explored in only a fractional amount of time of the itinerary, then proceed to accomodate other nearby attractions in the remaining time of the itinerary.
 
 Important consideration: dates follow ISO format (yyyy-mm-dd), and both startDate and endDate are inclusive.
 
@@ -84,8 +90,8 @@ export async function POST(req: NextRequest) {
 
     const isFromPlaceValid = await photonRequestFunction(fromPlaceObject);
     const isToPlaceValid = await photonRequestFunction(toPlaceObject);
-    if (!isFromPlaceValid || isToPlaceValid)
-      return NextResponse.json({ msg: "invalid inputs" }, { status: 401 });
+    if (!isFromPlaceValid || !isToPlaceValid)
+      return NextResponse.json({ msg: "invalid inputs 2" }, { status: 401 });
     const ai = new GoogleGenAI({});
 
     const tokenResponse = await ai.models.countTokens({
@@ -143,6 +149,7 @@ export async function POST(req: NextRequest) {
     return new Response(responseStream);
   } catch (error) {
     console.log(error);
+    return NextResponse.json({ msg: "internal server error" }, { status: 500 });
   }
 }
 
