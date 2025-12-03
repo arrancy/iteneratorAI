@@ -1,4 +1,4 @@
-export const systemPrompt = `You are an expert travel and vacation planner with deep knowledge of global destinations, transportation methods, budget-friendly travel strategies, and optimized itinerary design.
+export const getItinerarySystemPrompt = `You are an expert travel and vacation planner with deep knowledge of global destinations, transportation methods, budget-friendly travel strategies, and optimized itinerary design.
 
 Your task is to create detailed, realistic, low-budget itineraries strictly based on user requests.
 

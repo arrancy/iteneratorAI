@@ -1,12 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { getItenerarySchema } from "@/zodTypes/getItenerary";
-import { systemPrompt } from "@/lib/systemPrompt";
+import { getItinerarySystemPrompt } from "@/lib/prompts/getItinerarySystemPrompt";
 import z from "zod";
 import { photonRequestFunction } from "@/utils/photonRequest";
-import { ModifiedRequest } from "./route";
-import { tokenBucket } from "@/rateLimiter/state";
-export const aiResponseHandler = async (req: ModifiedRequest) => {
+export const aiResponseHandler = async (req: NextRequest) => {
   const reqBody = await req.json();
   type ReqBodyType = z.infer<typeof getItenerarySchema>;
   const userObject = reqBody as ReqBodyType;
@@ -50,7 +48,7 @@ export const aiResponseHandler = async (req: ModifiedRequest) => {
 
         parts: [
           {
-            text: systemPrompt,
+            text: getItinerarySystemPrompt,
           },
         ],
       },
@@ -72,7 +70,7 @@ export const aiResponseHandler = async (req: ModifiedRequest) => {
     config: {
       thinkingConfig: { thinkingBudget: 0 },
       tools: [{ googleSearch: {} }],
-      systemInstruction: systemPrompt,
+      systemInstruction: getItinerarySystemPrompt,
     },
 
     contents: JSON.stringify(userObject),
@@ -92,10 +90,5 @@ export const aiResponseHandler = async (req: ModifiedRequest) => {
     });
   }
   const responseStream = responseToStream();
-  new Response(responseStream);
-
-  const limitingToken = req.rateLimitingToken || "";
-
-  tokenBucket.push(limitingToken);
-  delete req.rateLimitingToken;
+  return new Response(responseStream);
 };
