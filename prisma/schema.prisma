@@ -52,10 +52,15 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  iteneraries   Itenerary[]
  
   @@map("users")
 }
- 
+ model Itenerary {
+  id     String @id @default(cuid())
+  userId String 
+  user   User @relation(fields: [userId], references: [id])
+ }
 model VerificationToken {
   identifier String
   token      String

@@ -11,34 +11,82 @@ import { getTransitInfoSystemPrompt } from "@/lib/prompts/getTransitInfoSystemPr
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ msg: "unauthenticared" }, { status: 401 });
-  }
-  const reqBody = await req.json();
-  const { success } = getTransitInfoSchema.safeParse(reqBody);
-  if (!success)
-    return NextResponse.json({ msg: "invalid inputs" }, { status: 400 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ msg: "unauthenticated" }, { status: 401 });
+    }
+    const reqBody = await req.json();
+    const { success } = getTransitInfoSchema.safeParse(reqBody);
+    type ReqBody = z.infer<typeof getTransitInfoSchema>;
+    const requestBody: ReqBody = reqBody;
+    if (!success)
+      return NextResponse.json({ msg: "invalid inputs" }, { status: 400 });
 
-  const response = await groq.chat.completions.create({
-    messages: [
-      { role: "system", content: getTransitInfoSystemPrompt },
-      { role: "user", content: JSON.stringify(reqBody) },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "transit-info-llm-schema",
+    const response = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: getTransitInfoSystemPrompt },
+        { role: "user", content: JSON.stringify(reqBody) },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "transit-info-llm-schema",
 
-        schema: z.toJSONSchema(transitInfoLlmSchema),
+          schema: z.toJSONSchema(transitInfoLlmSchema),
+        },
       },
-    },
-    model: "openai/gpt-oss-20b",
-  });
+      model: "openai/gpt-oss-20b",
+    });
 
-  const rawResult = JSON.parse(response.choices[0].message.content || "{}");
-  const validatedResult = transitInfoLlmSchema.safeParse(rawResult);
-  return !validatedResult.success
-    ? NextResponse.json({ msg: "internal server error" }, { status: 500 })
-    : NextResponse.json({ result: rawResult });
+    const rawResult = JSON.parse(response.choices[0].message.content || "{}");
+    const validatedResult = transitInfoLlmSchema.safeParse(rawResult);
+
+    if (validatedResult.success) {
+      const finalResult = validatedResult.data;
+      const airBnbUrl = `https://www.airbnb.co.in/${requestBody.getItineraryInput.toPlace.name}/stays`;
+      if (
+        finalResult.usesIndianRailways.applicable &&
+        finalResult.usesIndianRailways.journeys.length >= 0
+      ) {
+        const generateRedRailUrl = (source: string, destination: string) =>
+          `https://www.redbus.in/railways/search?src=${source}&dst=${destination}&doj=20260117&srcName=${source}&dstName=${destination}%20-%20All%20Stations&fcOpted=false`;
+
+        const redRailUrls = finalResult.usesIndianRailways.journeys.map(
+          (journey) => generateRedRailUrl(journey.source, journey.destination)
+        );
+        return NextResponse.json(
+          { result: finalResult, redRailUrls, airBnbUrl },
+          { status: 200 }
+        );
+      }
+
+      if (!finalResult.usesIndianRailways.applicable) {
+        return NextResponse.json(
+          { result: finalResult, airBnbUrl },
+          { status: 200 }
+        );
+      }
+
+      if (
+        finalResult.usesIndianRailways.applicable &&
+        finalResult.usesIndianRailways.journeys.length === 0
+      ) {
+        const { domesticTrip, internationalTrip } = finalResult;
+        return NextResponse.json({
+          domesticTrip,
+          internationalTrip,
+          airBnbUrl,
+        });
+      }
+    } else {
+      return NextResponse.json(
+        { msg: "internal server error" },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.log(error);
+    return NextResponse.json({ msg: "internal server error" }, { status: 500 });
+  }
 }

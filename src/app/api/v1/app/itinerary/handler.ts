@@ -90,5 +90,6 @@ export const aiResponseHandler = async (req: NextRequest) => {
     });
   }
   const responseStream = responseToStream();
+
   return new Response(responseStream);
 };
