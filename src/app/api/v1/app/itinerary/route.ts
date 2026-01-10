@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ msg: "unauthenticated" }, { status: 400 });
     }
 
-    return aiResponseHandler(req);
+    return aiResponseHandler(req, session.user.id);
   } catch (error) {
     console.log(error);
     return NextResponse.json({ msg: "internal server error" }, { status: 500 });

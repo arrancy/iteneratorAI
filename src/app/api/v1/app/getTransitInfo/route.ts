@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     if (validatedResult.success) {
       const finalResult = validatedResult.data;
-      const airBnbUrl = `https://www.airbnb.co.in/${requestBody.getItineraryInput.toPlace.name}/stays`;
+      const airBnbUrl = `https://www.airbnb.co.in/${requestBody.getItineraryInput.toPlace.name}-${requestBody.getItineraryInput.toPlace.country}/stays`;
       if (
         finalResult.usesIndianRailways.applicable &&
         finalResult.usesIndianRailways.journeys.length >= 0

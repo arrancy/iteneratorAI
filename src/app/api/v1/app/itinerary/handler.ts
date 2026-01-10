@@ -4,7 +4,7 @@ import { getItenerarySchema } from "@/zodTypes/getItenerary";
 import { getItinerarySystemPrompt } from "@/lib/prompts/getItinerarySystemPrompt";
 import z from "zod";
 import { photonRequestFunction } from "@/utils/photonRequest";
-export const aiResponseHandler = async (req: NextRequest) => {
+export const aiResponseHandler = async (req: NextRequest, userId: string) => {
   const reqBody = await req.json();
   type ReqBodyType = z.infer<typeof getItenerarySchema>;
   const userObject = reqBody as ReqBodyType;
@@ -12,10 +12,12 @@ export const aiResponseHandler = async (req: NextRequest) => {
     fromOrTo: "from";
     placeName: string;
     osm_key: "place";
+    country: string;
     osm_id: number;
   } = {
     fromOrTo: "from",
     placeName: userObject.fromPlace.name,
+    country: userObject.fromPlace.country,
     osm_key: "place",
     osm_id: userObject.fromPlace.osm_id,
   };
@@ -23,11 +25,13 @@ export const aiResponseHandler = async (req: NextRequest) => {
   const toPlaceObject: {
     fromOrTo: "to";
     placeName: string;
+    country: string;
     osm_key: "place" | "historic" | "tourism";
     osm_id: number;
   } = {
     fromOrTo: "to",
     placeName: userObject.toPlace.name,
+    country: userObject.toPlace.country,
     osm_key: userObject.toPlace.osm_key,
     osm_id: userObject.toPlace.osm_id,
   };
@@ -63,7 +67,7 @@ export const aiResponseHandler = async (req: NextRequest) => {
     ],
   });
   console.log(tokenResponse);
-
+  let finalItenerary = "";
   const response = await ai.models.generateContentStream({
     model: "gemini-2.5-flash",
 
@@ -81,10 +85,15 @@ export const aiResponseHandler = async (req: NextRequest) => {
       async pull(controller) {
         const { done, value } = await response.next();
         if (done) {
+          const iteneraryInDb = await prisma?.itenerary.create({
+            data: { text: finalItenerary, userId },
+          });
+          if (!iteneraryInDb)
+            throw new Error("could not save itenerary in DB ");
           controller.close();
           return;
         }
-
+        finalItenerary += value.text;
         controller.enqueue(value.text);
       },
     });

@@ -58,6 +58,7 @@ model User {
 }
  model Itenerary {
   id     String @id @default(cuid())
+  text   String @unique 
   userId String 
   user   User @relation(fields: [userId], references: [id])
  }
