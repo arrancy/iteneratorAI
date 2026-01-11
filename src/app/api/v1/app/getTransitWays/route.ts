@@ -20,6 +20,7 @@ async function webSearch({ query }: { query: string }) {
     }));
     return finalContentArray;
   } catch (error) {
+    if (error instanceof Error) console.log(error.message);
     return null;
   }
 }
@@ -128,6 +129,8 @@ export async function POST(req: NextRequest) {
       const toolCallMessage: ChatCompletionMessageParam = {
         role: "tool",
         tool_call_id: toolCalls[0].id,
+        //eslint-disable-next-line
+        //@ts-ignore
         name: toolCalls[0].function.name,
         content: String(searchResults),
       };
