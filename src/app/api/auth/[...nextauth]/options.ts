@@ -18,24 +18,28 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user, account, profile }) {
       if (
         user &&
-        account?.provider === "google" &&
-        profile &&
-        "email_verified" in profile
+        (account?.provider === "google" || account?.provider === "email")
       ) {
-        const isVerified = profile.email_verified;
         const { email } = user;
         if (!email) return token;
         const dbUser = await prisma.user.findUnique({ where: { email } });
         if (!dbUser) return token;
-        if (!dbUser.emailVerified && isVerified) {
-          await prisma.user.update({
-            where: { email },
-            data: { emailVerified: new Date() },
-          });
-        }
         token.id = dbUser.id;
+        if (profile && "email_verified" in profile) {
+          const isVerified = profile.email_verified;
+
+          if (!dbUser.emailVerified && isVerified) {
+            await prisma.user.update({
+              where: { email },
+              data: { emailVerified: new Date() },
+            });
+          }
+          token.id = dbUser.id;
+          return token;
+        }
         return token;
       }
+
       return token;
     },
     async session({ session, token }) {

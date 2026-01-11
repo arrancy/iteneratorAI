@@ -23,7 +23,7 @@ async function webSearch({ query }: { query: string }) {
     return null;
   }
 }
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     const reqBody = await req.json();
     const { success } = getItenerarySchema.safeParse(reqBody);
     if (!success) {
+      console.log("zod schema problem ");
       return NextResponse.json({ msg: "invalid inputs" }, { status: 403 });
     }
     type GetItetenerarySchemaType = z.infer<typeof getItenerarySchema>;
@@ -63,8 +64,10 @@ export async function GET(req: NextRequest) {
     } = { ...toPlaceRemaining, placeName: toPlaceName, fromOrTo: "to" };
 
     const isToPlaceValid = await photonRequestFunction(toPlaceObject);
-    if (!isFromPlaceValid || !isToPlaceValid)
+    if (!isFromPlaceValid || !isToPlaceValid) {
+      console.log("photon verification failed");
       return NextResponse.json({ msg: "invalid inputs" }, { status: 403 });
+    }
     const userPromptObject = {
       fromPlace: {
         name: fromPlaceObject.placeName,
@@ -101,7 +104,7 @@ export async function GET(req: NextRequest) {
     ];
     const response = await groq.chat.completions.create({
       messages,
-      model: "openai/gpt-oss-20b",
+      model: "llama-3.3-70b-versatile",
       tools,
     });
     const responseMessage = response.choices[0].message;
@@ -125,12 +128,13 @@ export async function GET(req: NextRequest) {
       const toolCallMessage: ChatCompletionMessageParam = {
         role: "tool",
         tool_call_id: toolCalls[0].id,
+        name: toolCalls[0].function.name,
         content: String(searchResults),
       };
       messages.push(toolCallMessage);
 
       const finalResponse = await groq.chat.completions.create({
-        model: "openai/gpt-oss-20b",
+        model: "llama-3.3-70b-versatile",
         messages,
       });
 

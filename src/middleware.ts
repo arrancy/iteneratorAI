@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
     return url.pathname.startsWith(pathName);
   };
 
-  if (token) {
+  if (token?.id) {
     if (startsWith("/app")) {
       return NextResponse.next();
     } else {
