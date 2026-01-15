@@ -15,6 +15,20 @@ export const getItenerarySchema = z.object({
   }),
   startDate: z.iso.date(),
   endDate: z.iso.date(),
+  mood: z
+    .array(
+      z.enum([
+        "relaxed",
+        "adventurous",
+        "mainstream",
+        "underrated",
+        "exploratory",
+      ])
+    )
+    .min(1)
+    .max(3),
+  budget: z.enum(["backpacking", "conservative", "decent", "good"]),
+  numberOfPeople: z.number().min(1).max(10),
 });
 
 // so we can take the display name for sure , on top of that we can also take class, class can be place, tourism , or historic that's it, and we can add in the system prompt that
