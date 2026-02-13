@@ -1,5 +1,5 @@
 import z from "zod";
-export const getItenerarySchema = z.object({
+export const getIteneraryBasicSchema = z.object({
   fromPlace: z.object({
     name: z.string().min(1),
     country: z.string().min(1),
@@ -15,6 +15,9 @@ export const getItenerarySchema = z.object({
   }),
   startDate: z.iso.date(),
   endDate: z.iso.date(),
+});
+
+export const getItenerarySchema = getIteneraryBasicSchema.extend({
   mood: z
     .array(
       z.enum([

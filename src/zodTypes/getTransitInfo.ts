@@ -1,7 +1,7 @@
 import z from "zod";
-import { getItenerarySchema } from "./getItenerary";
+import { getIteneraryBasicSchema } from "./getItenerary";
 export const getTransitInfoSchema = z.object({
-  getItineraryInput: getItenerarySchema,
+  getItineraryInput: getIteneraryBasicSchema,
   itinerary: z.string().min(1),
 });
 

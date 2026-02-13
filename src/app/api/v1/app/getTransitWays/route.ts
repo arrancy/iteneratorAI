@@ -1,7 +1,7 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { getTransitWaysSystemPrompt } from "@/lib/prompts/getTransitWaysSystemPrompt";
 import { photonRequestFunction } from "@/utils/photonRequest";
-import { getItenerarySchema } from "@/zodTypes/getItenerary";
+import { getIteneraryBasicSchema } from "@/zodTypes/getItenerary";
 import Groq from "groq-sdk";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
     }
     // req body schema for this will be get itenerary schema only and same logic to check if place is real
     const reqBody = await req.json();
-    const { success } = getItenerarySchema.safeParse(reqBody);
+    const { success } = getIteneraryBasicSchema.safeParse(reqBody);
     if (!success) {
       console.log("zod schema problem ");
       return NextResponse.json({ msg: "invalid inputs" }, { status: 403 });
     }
-    type GetItetenerarySchemaType = z.infer<typeof getItenerarySchema>;
+    type GetItetenerarySchemaType = z.infer<typeof getIteneraryBasicSchema>;
 
     const requestBody: GetItetenerarySchemaType = reqBody;
     const { name: fromPlaceName, ...remainingFromPlace } =

@@ -4,6 +4,8 @@ import { getItenerarySchema } from "@/zodTypes/getItenerary";
 import { getItinerarySystemPrompt } from "@/lib/prompts/getItinerarySystemPrompt";
 import z from "zod";
 import { photonRequestFunction } from "@/utils/photonRequest";
+import { popularIndiaDestinations } from "@/lib/data/popularIndiaDestinations";
+import supabase from "@/lib/db/supabaseSingleton";
 export const aiResponseHandler = async (req: NextRequest, userId: string) => {
   const reqBody = await req.json();
   type ReqBodyType = z.infer<typeof getItenerarySchema>;
@@ -40,8 +42,29 @@ export const aiResponseHandler = async (req: NextRequest, userId: string) => {
   const isToPlaceValid = await photonRequestFunction(toPlaceObject);
   if (!isFromPlaceValid || !isToPlaceValid)
     return NextResponse.json({ msg: "invalid inputs 2" }, { status: 401 });
-  const ai = new GoogleGenAI({});
 
+  const ai = new GoogleGenAI({});
+  if (popularIndiaDestinations.includes(userObject.toPlace.name)) {
+    // for RAG
+    const response = await ai.models.embedContent({
+      model: "gemini-embedding-001",
+      contents: userObject.toPlace.name,
+    });
+    if (!response || !response.embeddings) {
+      return NextResponse.json({ msg: "could not produce embeddings " });
+    }
+
+    const embeddings = response.embeddings[0].values;
+    if (!embeddings)
+      return NextResponse.json(
+        { msg: "internal server error" },
+        { status: 500 },
+      );
+    const { data, error } = await supabase.rpc("match_travel_embeddings", {
+      queryEmbedding: embeddings,
+      matchCount: 3,
+    });
+  }
   const tokenResponse = await ai.models.countTokens({
     model: "gemini-2.5-flash",
     // Put system instruction as a content item with role 'system'
