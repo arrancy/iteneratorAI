@@ -44,6 +44,8 @@ export const aiResponseHandler = async (req: NextRequest, userId: string) => {
     return NextResponse.json({ msg: "invalid inputs 2" }, { status: 401 });
 
   const ai = new GoogleGenAI({});
+  const ragAvailable = { status: false, text: "" };
+
   if (popularIndiaDestinations.includes(userObject.toPlace.name)) {
     // for RAG
     const response = await ai.models.embedContent({
@@ -61,9 +63,22 @@ export const aiResponseHandler = async (req: NextRequest, userId: string) => {
         { status: 500 },
       );
     const { data, error } = await supabase.rpc("match_travel_embeddings", {
-      queryEmbedding: embeddings,
-      matchCount: 3,
+      query_embedding: embeddings,
+      match_count: 3,
     });
+    if (error)
+      return NextResponse.json(
+        {
+          msg: "internal server error of supabase rpc : ",
+        },
+        { status: 500 },
+      );
+
+    const requiredText: string = data[0].content;
+    if (requiredText) {
+      ragAvailable.status = true;
+      ragAvailable.text = requiredText;
+    }
   }
   const tokenResponse = await ai.models.countTokens({
     model: "gemini-2.5-flash",
@@ -97,7 +112,11 @@ export const aiResponseHandler = async (req: NextRequest, userId: string) => {
     config: {
       thinkingConfig: { thinkingBudget: 0 },
       tools: [{ googleSearch: {} }],
-      systemInstruction: getItinerarySystemPrompt,
+      systemInstruction:
+        getItinerarySystemPrompt +
+        (ragAvailable.status
+          ? `\n\n here is some extra special context provided by our places database about the place the user has asked about, make sure to include this in your itenerary  : \n${ragAvailable.text}`
+          : ""),
     },
 
     contents: JSON.stringify(userObject),

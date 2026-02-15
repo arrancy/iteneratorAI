@@ -18,13 +18,13 @@ export default function Signin() {
         />
         <button
           onClick={() => signIn("email", { email })}
-          className="border-2 rounded-md p-2 text-white text-2x"
+          className="border-2 rounded-md p-2 text-white text-2x cursor-pointer hover:bg-slate-800 focus:scale-95 transition-all ease-in-out duration-150"
         >
           signin with email
         </button>
         <button
           onClick={() => signIn("google")}
-          className="border-2 rounded-md p-2 text-white text-2xl"
+          className="border-2 rounded-md p-2 text-white text-2xl cursor-pointer hover:bg-slate-800 focus:scale-95 transition-all ease-in-out duration-150"
         >
           signin
         </button>
