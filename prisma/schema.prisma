@@ -14,6 +14,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ImageFormats {
+  png
+  jpeg
+  jpg
+}
+
 model Account {
   id                 String  @id @default(cuid())
   userId             String  @map("user_id")
@@ -53,6 +59,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   iteneraries   Itenerary[]
+  profilePicture ProfilePictures
  
   @@map("users")
 }
@@ -61,6 +68,16 @@ model User {
   text   String @unique 
   userId String 
   user   User @relation(fields: [userId], references: [id])
+ }
+
+ model ProfilePictures {
+    id               String @id @default(cuid())
+    originalFileName String
+    imageFromat      ImageFormats
+    createdAt        DateTime @default(now())
+    userId           String @unique
+    user             User @relation(fields: [userId], references: [id])
+
  }
 model VerificationToken {
   identifier String

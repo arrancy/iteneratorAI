@@ -9,6 +9,9 @@ import supabase from "@/lib/db/supabaseSingleton";
 export const aiResponseHandler = async (req: NextRequest, userId: string) => {
   const reqBody = await req.json();
   type ReqBodyType = z.infer<typeof getItenerarySchema>;
+  const { success } = getItenerarySchema.safeParse(reqBody);
+  if (!success)
+    return NextResponse.json({ msg: "invalid inputs" }, { status: 403 });
   const userObject = reqBody as ReqBodyType;
   const fromPlaceObject: {
     fromOrTo: "from";
