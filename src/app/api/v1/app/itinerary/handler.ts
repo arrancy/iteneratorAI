@@ -131,7 +131,13 @@ export const aiResponseHandler = async (req: NextRequest, userId: string) => {
         const { done, value } = await response.next();
         if (done) {
           const iteneraryInDb = await prisma?.itenerary.create({
-            data: { text: finalItenerary, userId },
+            data: {
+              text: finalItenerary,
+              userId,
+              source: fromPlaceObject.placeName,
+              destination: toPlaceObject.placeName,
+              headCount: userObject.numberOfPeople,
+            },
           });
           if (!iteneraryInDb)
             throw new Error("could not save itenerary in DB ");

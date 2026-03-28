@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const photoMetadata = reqBody as z.infer<typeof addProfilePictureSchema>;
     const { fileName, imageFormat, fileSize } = photoMetadata;
 
-    const addedToDatabase = await prisma.profilePictures.create({
+    const addedToDatabase = await prisma.profilePicture.create({
       data: {
         originalFileName: fileName,
         imageFormat,
