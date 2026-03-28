@@ -20,6 +20,12 @@ enum ImageFormats {
   jpg
 }
 
+enum InviteStatus {
+  pending 
+  accepted 
+  rejected
+}
+
 model Account {
   id                 String  @id @default(cuid())
   userId             String  @map("user_id")
@@ -62,7 +68,8 @@ model User {
   profilePicture ProfilePicture?
   createdTrips   Trip[]
   trips          TripMember[]
- 
+  sentInvites     Invite[]
+ receivedInvites  Invite[]
   @@map("users")
 }
  model Itenerary {
@@ -94,6 +101,7 @@ model User {
   createdBy String
   destination String
   members  TripMember[]
+  invites Invite[]
 
  }
  model TripMember {
@@ -105,7 +113,19 @@ model User {
 
 
  }
+model Invite {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id])
+  invitedBy String
+  sender User @relation(fields: [invitedBy], references: [id])
+  userInvited String
+  receiver User @relation(fields: [userInvited], references: [id])
+  status InviteStatus
+  createdAt  DateTime @default(now())
 
+
+}
  
 model VerificationToken {
   identifier String
