@@ -134,8 +134,10 @@ export const aiResponseHandler = async (req: NextRequest, userId: string) => {
             data: {
               text: finalItenerary,
               userId,
-              source: fromPlaceObject.placeName,
-              destination: toPlaceObject.placeName,
+              source:
+                fromPlaceObject.placeName + ", " + fromPlaceObject.country,
+              destination:
+                toPlaceObject.placeName + ", " + toPlaceObject.country,
               headCount: userObject.numberOfPeople,
             },
           });

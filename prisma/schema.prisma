@@ -92,6 +92,7 @@ model User {
   name String
   creator User @relation(fields: [createdBy], references: [id])
   createdBy String
+  destination String
   members  TripMember[]
 
  }
