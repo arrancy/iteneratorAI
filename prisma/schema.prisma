@@ -68,8 +68,8 @@ model User {
   profilePicture ProfilePicture?
   createdTrips   Trip[]
   trips          TripMember[]
-  sentInvites     Invite[]
- receivedInvites  Invite[]
+  sentInvites     Invite[] @relation("SentInvites")
+  receivedInvites  Invite[] @relation("ReceivedInvites")
   @@map("users")
 }
  model Itenerary {
@@ -118,9 +118,9 @@ model Invite {
   tripId String
   trip Trip @relation(fields: [tripId], references: [id])
   invitedBy String
-  sender User @relation(fields: [invitedBy], references: [id])
+  sender User @relation("SentInvites", fields: [invitedBy], references: [id])
   userInvited String
-  receiver User @relation(fields: [userInvited], references: [id])
+  receiver User @relation("ReceivedInvites", fields: [userInvited], references: [id])
   status InviteStatus
   createdAt  DateTime @default(now())
 
